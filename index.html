@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Trazas - Gral. Paz / 27 de Febrero</title>
+    <!-- Estilos de Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #map-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #map {
+            flex-grow: 1;
+            width: 100%;
+            z-index: 1;
+        }
+        .info-box {
+            background-color: white;
+            padding: 15px 20px;
+            border-top: 3px solid #007bff;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            max-height: 30vh;
+            overflow-y: auto;
+            z-index: 2;
+        }
+        .info-box h2 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 1.5em;
+        }
+        .info-box p {
+            margin: 5px 0;
+            color: #555;
+        }
+        .info-box ul {
+            margin: 5px 0;
+            padding-left: 25px;
+        }
+        .info-box li {
+            margin-bottom: 8px;
+            border-left: 4px solid;
+            padding-left: 10px;
+            list-style-type: none;
+        }
+        .leyenda-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .leaflet-popup-content {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .leaflet-popup-content strong {
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div id="map-container">
+        <!-- Div donde se cargará el mapa -->
+        <div id="map"></div>
+        
+        <!-- Cuadro de descripción inferior -->
+        <div class="info-box">
+            <h2>🚓 Cobertura de Traza Móviles - Gral. Paz</h2>
+            <p>Los binomios de motorizada y/o móviles permanecen a la espera de órdenes desde los Centros de Monitoreo, pero realizan recorridos preventivos sobre la traza de la Av. Gral. Paz. Las trazas se dividen de la siguiente manera:</p>
+            <ul>
+                <li style="border-left-color: #FF4D4D;"><span class="leyenda-color" style="background-color: #FF4D4D;"></span><strong>TRAZA 1 (QTH: Av. 27 de Febrero – Puente Alsina):</strong> Desde Av. Roca y Gral Paz hasta Av. 27 de Febrero (Puente Alsina).</li>
+                <li style="border-left-color: #FFA64D;"><span class="leyenda-color" style="background-color: #FFA64D;"></span><strong>TRAZA 2 (QTH: Gral. Paz y Av. C. Roca):</strong> Desde Av. C. Roca hasta Rodolfo Scappino (ambas direcciones).</li>
+                <li style="border-left-color: #FFFF4D;"><span class="leyenda-color" style="background-color: #FFFF4D; border: 1px solid #ccc;"></span><strong>TRAZA 3 (QTH: Gral. Paz y Av. J. B. Alberdi):</strong> Desde Rodolfo Scappino hasta Av. J. B. Alberdi (ambas direcciones).</li>
+                <li style="border-left-color: #4DFF4D;"><span class="leyenda-color" style="background-color: #4DFF4D;"></span><strong>TRAZA 4 (QTH: Gral. Paz y Jorge Chávez):</strong> Desde Av. J. B. Alberdi hasta Ramón L. Falcón (ambas direcciones).</li>
+                <li style="border-left-color: #4DA6FF;"><span class="leyenda-color" style="background-color: #4DA6FF;"></span><strong>TRAZA 5 (QTH: Gral. Paz y Nazarre):</strong> Desde Ramón L. Falcón hasta Av. Francisco Beiró (ambas direcciones).</li>
+                <li style="border-left-color: #9D4DFF;"><span class="leyenda-color" style="background-color: #9D4DFF;"></span><strong>TRAZA 6 (QTH: Gral. Paz y Av. Lope de Vega):</strong> Desde Av. Francisco Beiró hasta Av. San Martín (ambas direcciones).</li>
+                <li style="border-left-color: #FF4DFF;"><span class="leyenda-color" style="background-color: #FF4DFF;"></span><strong>TRAZA 7 (QTH: Gral. Paz y Av. Constituyentes):</strong> Desde Av. San Martín hasta Av. De los Constituyentes (ambas direcciones).</li>
+                <li style="border-left-color: #B3B3B3;"><span class="leyenda-color" style="background-color: #B3B3B3;"></span><strong>TRAZA 8 (QTH: Colectora Gral. Paz y Dr. R. Balbín):</strong> Desde Av. De los Constituyentes hasta Av. Cabildo (ambas direcciones).</li>
+            </ul>
+            <p><small>📍 Los puntos QTH (base/espera) están marcados con un ícono de casa. Los números en el mapa indican el inicio de cada traza.</small></p>
+        </div>
+    </div>
+
+    <!-- Scripts de Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Inicializar el mapa centrado en el sector sur de Gral Paz para abarcar desde Puente Alsina hasta Cabildo
+        const map = L.map('map').setView([-34.65, -58.48], 12); // Zoom para ver todo el recorrido
+
+        // Capa base: OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // --- DEFINICIÓN DE TRAZAS (segmentos de Av. Gral Paz) ---
+        // Las coordenadas son aproximadas para representar los tramos indicados.
+        // En un entorno real, se ajustarían con mayor precisión.
+
+        // Traza 1: Desde Av. Roca y Gral Paz hasta Puente Alsina (Av. 27 de Febrero)
+        const traza1 = L.polyline([
+            [-34.698247, -58.470106], // Av. Roca y Gral Paz (aproximado)
+            [-34.704812, -58.4613662],
+            [-34.664660, -58.427571],
+            [-34.661135, -58.422614],
+            [-34.659062, -58.417012]  // Puente Alsina / 27 de Febrero
+        ], { color: '#FF4D4D', weight: 6, opacity: 0.8 }).addTo(map);
+        traza1.bindPopup('<strong>TRAZA 1</strong><br>QTH: Av. 27 de Febrero - Puente Alsina<br>Recorrido: Av. Roca y Gral Paz ↔ 27 de Febrero');
+
+        // Traza 2: Desde Av. Coronel Roca hasta Rodolfo Scappino
+        const traza2 = L.polyline([
+            [-34.698247, -58.470106], // Av. C. Roca (mismo punto inicial que traza1 por continuidad)
+            [-34.687069, -58.485012],
+            [-34.676786, -58.498518]  // Rodolfo Scappino (aproximado)
+        ], { color: '#FFA64D', weight: 6, opacity: 0.8 }).addTo(map);
+        traza2.bindPopup('<strong>TRAZA 2</strong><br>QTH: Gral Paz y Av. C. Roca<br>Recorrido: Av. C. Roca ↔ Rodolfo Scappino');
+
+        // Traza 3: Desde Rodolfo Scappino hasta Av. J. B. Alberdi
+        const traza3 = L.polyline([
+            [-34.676786, -58.498518], // Rodolfo Scappino
+            [-34.662175, -58.517901]  // Av. J. B. Alberdi (aproximado)
+        ], { color: '#FFFF4D', weight: 6, opacity: 0.8 }).addTo(map);
+        traza3.bindPopup('<strong>TRAZA 3</strong><br>QTH: Gral Paz y Av. J. B. Alberdi<br>Recorrido: Rodolfo Scappino ↔ Av. J. B. Alberdi');
+
+        // Traza 4: Desde Av. J. B. Alberdi hasta Ramón L. Falcón
+        const traza4 = L.polyline([
+            [-34.662175, -58.517901], // Av. J. B. Alberdi
+            [-34.655085, -58.527205],
+            [-34.652562, -58.528658], // J. Chavez
+            [-34.640501, -58.529450]  // Ramón L. Falcón (aproximado)
+        ], { color: '#4DFF4D', weight: 6, opacity: 0.8 }).addTo(map);
+        traza4.bindPopup('<strong>TRAZA 4</strong><br>QTH: Gral Paz y Jorge Chávez<br>Recorrido: Av. J. B. Alberdi ↔ Ramón L. Falcón');
+
+        // Traza 5: Desde Ramón L. Falcón hasta Av. Francisco Beiró
+        const traza5 = L.polyline([
+            [-34.640501, -58.529450], // Ramón L. Falcón
+            [-34.625508, -58.530324], // Nazarre
+            [-34.618127, -58.530717]  // Av. Francisco Beiró (aproximado)
+        ], { color: '#4DA6FF', weight: 6, opacity: 0.8 }).addTo(map);
+        traza5.bindPopup('<strong>TRAZA 5</strong><br>QTH: Gral Paz y Nazarre<br>Recorrido: Ramón L. Falcón ↔ Av. Francisco Beiró');
+
+        // Traza 6: Desde Av. Francisco Beiró hasta Av. San Martín
+        const traza6 = L.polyline([
+            [-34.618127, -58.530717], // Av. Francisco Beiró
+            [-34.615550, -58.530801], // Lope de Vega
+            [-34.589254, -58.518551]  // Av. San Martín (aproximado)
+        ], { color: '#9D4DFF', weight: 6, opacity: 0.8 }).addTo(map);
+        traza6.bindPopup('<strong>TRAZA 6</strong><br>QTH: Gral Paz y Av. Lope de Vega<br>Recorrido: Av. Francisco Beiró ↔ Av. San Martín');
+
+        // Traza 7: Desde Av. San Martín hasta Av. De los Constituyentes
+        const traza7 = L.polyline([
+            [-34.589254, -58.518551], // Av. San Martín
+            [-34.569962, -58.509609]  // Av. De los Constituyentes (aproximado)
+        ], { color: '#FF4DFF', weight: 6, opacity: 0.8 }).addTo(map);
+        traza7.bindPopup('<strong>TRAZA 7</strong><br>QTH: Gral Paz y Av. Constituyentes<br>Recorrido: Av. San Martín ↔ Av. De los Constituyentes');
+
+        // Traza 8: Desde Av. De los Constituyentes hasta Av. Cabildo
+        const traza8 = L.polyline([
+            [-34.569962, -58.509609], // Av. De los Constituyentes
+            [-34.551371, -58.500748],
+            [-34.549623, -58.499237],
+            [-34.548697, -58.497608],
+            [-34.538765, -58.475484]  // Av. Cabildo (aproximado)
+        ], { color: '#B3B3B3', weight: 6, opacity: 0.8 }).addTo(map);
+        traza8.bindPopup('<strong>TRAZA 8</strong><br>QTH: Colectora Gral Paz y Dr. R. Balbín<br>Recorrido: Av. De los Constituyentes ↔ Av. Cabildo');
+
+        // --- PUNTOS QTH (Lugares de espera) ---
+        // Icono personalizado para QTH
+        const qthIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/609/609803.png', // Icono de casa/puesto policial
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -28]
+        });
+
+        // También marcamos los puntos de inicio/fin de cada traza con números
+        function addNumberMarker(lat, lng, number, color) {
+            const divIcon = L.divIcon({
+                html: `<div style="background-color: ${color}; color: black; font-weight: bold; width: 22px; height: 22px; border-radius: 50%; text-align: center; line-height: 22px; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">${number}</div>`,
+                className: 'number-marker',
+                iconSize: [26, 26],
+                iconAnchor: [13, 13]
+            });
+            L.marker([lat, lng], { icon: divIcon }).addTo(map).bindPopup(`Inicio/Fin Traza ${number}`);
+        }
+
+        // Puntos QTH específicos (según descripción)
+        L.marker([-34.659062, -58.417012], { icon: qthIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 1</strong><br>Av. 27 de Febrero - Puente Alsina');
+        L.marker([-34.698003, -58.470053], { icon: qthIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 2</strong><br>Av. Gral Paz y Av. Coronel Roca');
+        L.marker([-34.662043, -58.517604], { icon: qthIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 3</strong><br>Av. Gral Paz y Av. Juan Bautista Alberdi');
+        L.marker([-34.649977, -58.528588], { icon: qthIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 4</strong><br>Av. Gral Paz y calle Jorge Chavez');
+        L.marker([-34.625508, -58.530324], { icon: qthIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 5</strong><br>Av. Gral Paz y Calle Nazarre');
+        L.marker([-34.615550, -58.530801], { icon: qthIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 6</strong><br>Av. Gral Paz y Av. Lope de Vega');
+        L.marker([-34.569764, -58.509253], { icon: qthIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 7</strong><br>Av. Gral Paz y Av. Constituyentes');
+        L.marker([-34.550555, -58.499442], { icon: qthIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 8</strong><br>Colectora Av. Gral Paz y Av. Dr. Ricardo Balbín');
+
+        // Marcadores numerados para claridad (inicios de cada segmento)
+        addNumberMarker(-34.659062, -58.417012, '1', '#FF4D4D');
+        addNumberMarker(-34.698247, -58.470106, '2', '#FFA64D');
+        addNumberMarker(-34.676786, -58.498518, '3', '#FFFF4D');
+        addNumberMarker(-34.662175, -58.517901, '4', '#4DFF4D');
+        addNumberMarker(-34.640501, -58.529450, '5', '#4DA6FF');
+        addNumberMarker(-34.618127, -58.530717, '6', '#9D4DFF');
+        addNumberMarker(-34.589254, -58.518551, '7', '#FF4DFF');
+        addNumberMarker(-34.569962, -58.509609, '8', '#B3B3B3');
+
+        // Ajustar límites del mapa para mostrar todas las trazas
+        const group = L.featureGroup([traza1, traza2, traza3, traza4, traza5, traza6, traza7, traza8]);
+        map.fitBounds(group.getBounds().pad(0.1));
+
+    </script>
+</body>
+</html>
