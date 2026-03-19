@@ -2,96 +2,183 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mapa de Trazas - Policía de la Ciudad</title>
     <!-- Estilos de Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body {
+        /* RESET Y ESTILOS BASE */
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
         }
         
-        .app-container {
-            display: flex;
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
             height: 100vh;
             width: 100vw;
         }
         
-        /* Sidebar izquierdo - actualizado con nueva paleta de colores */
+        /* CONTENEDOR PRINCIPAL */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+        
+        /* SIDEBAR */
         .info-sidebar {
             width: 340px;
             background-color: #f8f9fa;
-            border-right: 3px solid #2373aa; /* Cambiado a azul del escudo */
+            border-right: 3px solid #2373aa;
             box-shadow: 2px 0 10px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
-            z-index: 10;
+            z-index: 1000;
+            height: 100vh;
+            transition: transform 0.3s ease;
+            position: relative;
             overflow-y: auto;
+            flex-shrink: 0; /* IMPORTANTE: Evita que el sidebar se encoja */
+        }
+        
+        /* Sidebar colapsado */
+        .info-sidebar.collapsed {
+            transform: translateX(-100%);
+            width: 0; /* Para que no ocupe espacio */
+            min-width: 0;
+            border-right: none;
+        }
+        
+        /* Sidebar en móvil visible */
+        .info-sidebar.mobile-visible {
+            position: absolute;
+            width: 85%;
+            max-width: 320px;
+            z-index: 2000;
+            transform: translateX(0);
+            box-shadow: 2px 0 20px rgba(0,0,0,0.3);
+            height: 100vh;
+        }
+        
+        /* BOTÓN DE TOGGLE */
+        .toggle-sidebar-btn {
+            position: absolute;
+            left: 340px;
+            top: 20px;
+            z-index: 1500;
+            background-color: #2373aa;
+            color: white;
+            border: none;
+            border-radius: 0 8px 8px 0;
+            width: 32px;
+            height: 60px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 2px 4px 10px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: left 0.3s ease;
+            border-left: 2px solid #b8b8b8;
             padding: 0;
         }
         
-        /* Cabecera con el escudo - actualizada con colores de la paleta */
+        .toggle-sidebar-btn:hover {
+            background-color: #267ca2;
+        }
+        
+        .toggle-sidebar-btn.collapsed {
+            left: 0;
+        }
+        
+        /* BOTÓN DE CIERRE PARA MÓVIL */
+        .mobile-close-btn {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #06090a;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 2500;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #b8b8b8;
+        }
+        
+        /* OVERLAY PARA MÓVIL */
+        .sidebar-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1500;
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
+        }
+        
+        /* MAPA - Se adapta automáticamente */
+        #map {
+            flex-grow: 1;
+            height: 100vh;
+            z-index: 1;
+            transition: width 0.3s ease;
+        }
+        
+        /* CABECERA DEL SIDEBAR */
         .sidebar-header {
-            background: linear-gradient(135deg, #06090a 0%, #2373aa 100%); /* Negro a azul */
+            background: linear-gradient(135deg, #06090a 0%, #2373aa 100%);
             color: white;
             padding: 20px 15px;
             text-align: center;
-            border-bottom: 3px solid #b8b8b8; /* Gris claro */
-        }
-        
-        .escudo-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        /* Punto 2: Escudo institucional con la imagen proporcionada */
-        .escudo-img {
-            width: 100px;
-            height: auto;
-            margin-bottom: 10px;
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
-            background-color: white;
-            border-radius: 50%;
-            padding: 5px;
+            border-bottom: 3px solid #b8b8b8;
         }
         
         .sidebar-header h1 {
-            margin: 10px 0 5px 0;
+            margin: 0 0 5px 0;
             font-size: 1.4rem;
             font-weight: 600;
-            letter-spacing: 1px;
-            color: white;
         }
         
         .sidebar-header h2 {
             margin: 0;
             font-size: 1rem;
             font-weight: 300;
-            opacity: 0.9;
-            color: #b8b8b8; /* Gris claro */
+            color: #b8b8b8;
         }
         
+        /* CONTENIDO DEL SIDEBAR */
         .sidebar-content {
             padding: 20px 15px;
             flex-grow: 1;
+            overflow-y: auto;
         }
         
         .sidebar-content h3 {
             margin: 0 0 15px 0;
-            color: #06090a; /* Negro */
+            color: #06090a;
             font-size: 1.2rem;
-            border-bottom: 2px solid #2373aa; /* Azul */
+            border-bottom: 2px solid #2373aa;
             padding-bottom: 8px;
         }
         
         .sidebar-content p {
             margin: 10px 0;
-            color: #5d5d5d; /* Gris medio */
+            color: #5d5d5d;
             font-size: 0.9rem;
             line-height: 1.5;
         }
@@ -99,6 +186,7 @@
         .trazas-lista {
             margin: 15px 0;
             padding: 0;
+            list-style: none;
         }
         
         .traza-item {
@@ -108,259 +196,321 @@
             background-color: white;
             border-radius: 0 6px 6px 0;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            list-style-type: none;
             font-size: 0.85rem;
-        }
-        
-        .leyenda-color {
-            display: inline-block;
-            width: 18px;
-            height: 18px;
-            border-radius: 4px;
-            margin-right: 8px;
-            vertical-align: middle;
         }
         
         .traza-item strong {
             display: block;
             margin-bottom: 4px;
-            color: #2373aa; /* Azul */
+            color: #2373aa;
         }
         
         .footer-note {
             margin-top: 20px;
             padding-top: 15px;
-            border-top: 1px dashed #b8b8b8; /* Gris claro */
+            border-top: 1px dashed #b8b8b8;
             font-size: 0.8rem;
-            color: #5d5d5d; /* Gris medio */
-        }
-        
-        .footer-note p {
             color: #5d5d5d;
         }
         
-        #map {
-            flex-grow: 1;
-            height: 100vh;
-            z-index: 1;
-        }
-        
-        .leaflet-popup-content {
-            font-size: 13px;
-            font-weight: 500;
-        }
-        .leaflet-popup-content strong {
-            color: #2373aa; /* Azul */
-        }
-        
-        .info-sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .info-sidebar::-webkit-scrollbar-track {
-            background: #b8b8b8; /* Gris claro */
-        }
-        .info-sidebar::-webkit-scrollbar-thumb {
-            background: #2373aa; /* Azul */
-            border-radius: 3px;
-        }
-        .info-sidebar::-webkit-scrollbar-thumb:hover {
-            background: #267ca2; /* Azul más claro */
+        /* MEDIA QUERIES PARA MÓVIL */
+        @media (max-width: 768px) {
+            .info-sidebar {
+                position: absolute;
+                width: 85%;
+                max-width: 320px;
+                transform: translateX(-100%);
+                z-index: 2000;
+            }
+            
+            .info-sidebar.mobile-visible {
+                transform: translateX(0);
+            }
+            
+            .toggle-sidebar-btn {
+                left: 0;
+                top: 70px;
+                width: 28px;
+                height: 50px;
+                font-size: 16px;
+            }
+            
+            .mobile-close-btn {
+                display: flex;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar izquierdo - exactamente igual pero con nuevos colores -->
-        <div class="info-sidebar">
+    <!-- Contenedor principal -->
+    <div id="appContainer" class="app-container">
+        <!-- Overlay para móvil -->
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+        
+        <!-- Botón de cerrar para móvil -->
+        <button id="mobileCloseBtn" class="mobile-close-btn">✕</button>
+        
+        <!-- Botón de toggle -->
+        <button class="toggle-sidebar-btn" id="toggleSidebarBtn">◀</button>
+        
+        <!-- Sidebar -->
+        <div class="info-sidebar" id="infoSidebar">
             <div class="sidebar-header">
-                <div class="escudo-container">
-                    <!-- Escudo eliminado completamente -->
-                    <h1>Policía de la Ciudad</h1>
-                    <h2>División Anillo Digital</h2>
-                </div>
+                <h1>Policía de la Ciudad</h1>
+                <h2>División Anillo Digital</h2>
             </div>
             
             <div class="sidebar-content">
                 <h3>🚓 Cobertura de Traza Móviles</h3>
-                <p>Los binomios de motorizada permanecen a la espera de órdenes desde los Centros de Monitoreo, realizando recorridos preventivos sobre Av. Gral. Paz.</p>
+                <p>Los binomios realizan recorridos preventivos sobre Av. Gral. Paz.</p>
                 
                 <ul class="trazas-lista">
                     <li class="traza-item" style="border-left-color: #FF4D4D;">
-                        <span class="leyenda-color" style="background-color: #FF4D4D;"></span>
-                        <strong>TRAZA 1 (QTH: Av. 27 de Febrero – Puente Alsina)</strong>
-                        Desde Av. Roca y Gral Paz hasta Av. 27 de Febrero.
+                        <strong>TRAZA 1 (Puente Alsina)</strong>
+                        Desde Av. Roca y Gral Paz hasta 27 de Febrero.
                     </li>
                     <li class="traza-item" style="border-left-color: #FFA64D;">
-                        <span class="leyenda-color" style="background-color: #FFA64D;"></span>
-                        <strong>TRAZA 2 (QTH: Gral. Paz y Av. C. Roca)</strong>
+                        <strong>TRAZA 2 (Av. C. Roca)</strong>
                         Desde Av. C. Roca hasta Rodolfo Scappino.
                     </li>
                     <li class="traza-item" style="border-left-color: #FFFF4D;">
-                        <span class="leyenda-color" style="background-color: #FFFF4D; border: 1px solid #ccc;"></span>
-                        <strong>TRAZA 3 (QTH: Gral. Paz y Av. J. B. Alberdi)</strong>
+                        <strong>TRAZA 3 (Av. Alberdi)</strong>
                         Desde Rodolfo Scappino hasta Av. J. B. Alberdi.
                     </li>
                     <li class="traza-item" style="border-left-color: #4DFF4D;">
-                        <span class="leyenda-color" style="background-color: #4DFF4D;"></span>
-                        <strong>TRAZA 4 (QTH: Gral. Paz y Jorge Chávez)</strong>
+                        <strong>TRAZA 4 (Jorge Chávez)</strong>
                         Desde Av. J. B. Alberdi hasta Ramón L. Falcón.
                     </li>
                     <li class="traza-item" style="border-left-color: #4DA6FF;">
-                        <span class="leyenda-color" style="background-color: #4DA6FF;"></span>
-                        <strong>TRAZA 5 (QTH: Gral. Paz y Nazarre)</strong>
+                        <strong>TRAZA 5 (Nazarre)</strong>
                         Desde Ramón L. Falcón hasta Av. Francisco Beiró.
                     </li>
                     <li class="traza-item" style="border-left-color: #9D4DFF;">
-                        <span class="leyenda-color" style="background-color: #9D4DFF;"></span>
-                        <strong>TRAZA 6 (QTH: Gral. Paz y Av. Lope de Vega)</strong>
+                        <strong>TRAZA 6 (Lope de Vega)</strong>
                         Desde Av. Francisco Beiró hasta Av. San Martín.
                     </li>
                     <li class="traza-item" style="border-left-color: #FF4DFF;">
-                        <span class="leyenda-color" style="background-color: #FF4DFF;"></span>
-                        <strong>TRAZA 7 (QTH: Gral. Paz y Av. Constituyentes)</strong>
+                        <strong>TRAZA 7 (Constituyentes)</strong>
                         Desde Av. San Martín hasta Av. De los Constituyentes.
                     </li>
                     <li class="traza-item" style="border-left-color: #06090a;">
-                        <span class="leyenda-color" style="background-color: #06090a;"></span>
-                        <strong>TRAZA 8 (QTH: Colectora Gral. Paz y Dr. R. Balbín)</strong>
+                        <strong>TRAZA 8 (Dr. Balbín)</strong>
                         Desde Av. De los Constituyentes hasta Av. Cabildo.
                     </li>
                 </ul>
                 
                 <div class="footer-note">
-                    <p>📍 Los puntos QTH (base/espera) están marcados con íconos de móvil policial. Los números en el mapa indican el inicio de cada traza.</p>
-                    <p>🚓 Los binomios realizan recorridos en ambas direcciones (Provincia / CABA).</p>
+                    <p>📍 Puntos QTH marcados con 🚓</p>
+                    <p>🚓 Recorridos en ambas direcciones</p>
                 </div>
             </div>
         </div>
         
-        <!-- Div donde se cargará el mapa -->
+        <!-- Mapa -->
         <div id="map"></div>
     </div>
 
-    <!-- Scripts de Leaflet -->
+    <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Inicializar el mapa
-        const map = L.map('map').setView([-34.65, -58.48], 12);
+        // Variable global para el mapa
+        let map;
+        
+        // FUNCIÓN DE INICIALIZACIÓN DEL MAPA - CON LAS COORDENADAS EXACTAS
+        function inicializarMapa() {
+            // Inicializar mapa
+            map = L.map('map').setView([-34.62, -58.50], 11);
 
-        // Capa base
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | Policía de la Ciudad'
-        }).addTo(map);
+            // Capa base
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | Policía de la Ciudad'
+            }).addTo(map);
 
-        // --- PUNTO 3: ÍCONO DE MÓVIL POLICIAL (reemplaza a la moto) ---
+            // Ícono con emoji 🚓
             const movilIcon = L.divIcon({
-            html: `<div style="background-color: #06090a; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 3px solid #2373aa; box-shadow: 0 4px 8px rgba(0,0,0,0.3); font-size: 24px; line-height: 1;">
-                🚓
-            </div>`,
-            className: 'movil-icon',
-            iconSize: [46, 46],
-            iconAnchor: [23, 23],
-            popupAnchor: [0, -23]
-        });
-
-        // --- DEFINICIÓN DE TRAZAS (sin cambios) ---
-        // Traza 1: Desde Av. Roca y Gral Paz hasta Puente Alsina (Av. 27 de Febrero)
-        const traza1 = L.polyline([
-            [-34.698247, -58.470106], // Av. Roca y Gral Paz (aproximado)
-            [-34.704812, -58.4613662],
-            [-34.664660, -58.427571],
-            [-34.661135, -58.422614],
-            [-34.659062, -58.417012]  // Puente Alsina / 27 de Febrero
-        ], { color: '#FF4D4D', weight: 6, opacity: 0.8 }).addTo(map);
-        traza1.bindPopup('<strong>TRAZA 1</strong><br>QTH: Av. 27 de Febrero - Puente Alsina<br>Recorrido: Av. Roca y Gral Paz ↔ 27 de Febrero');
-
-        // Traza 2: Desde Av. Coronel Roca hasta Rodolfo Scappino
-        const traza2 = L.polyline([
-            [-34.698247, -58.470106], // Av. C. Roca (mismo punto inicial que traza1 por continuidad)
-            [-34.687069, -58.485012],
-            [-34.676786, -58.498518]  // Rodolfo Scappino (aproximado)
-        ], { color: '#FFA64D', weight: 6, opacity: 0.8 }).addTo(map);
-        traza2.bindPopup('<strong>TRAZA 2</strong><br>QTH: Gral Paz y Av. C. Roca<br>Recorrido: Av. C. Roca ↔ Rodolfo Scappino');
-
-        // Traza 3: Desde Rodolfo Scappino hasta Av. J. B. Alberdi
-        const traza3 = L.polyline([
-            [-34.676786, -58.498518], // Rodolfo Scappino
-            [-34.662175, -58.517901]  // Av. J. B. Alberdi (aproximado)
-        ], { color: '#FFFF4D', weight: 6, opacity: 0.8 }).addTo(map);
-        traza3.bindPopup('<strong>TRAZA 3</strong><br>QTH: Gral Paz y Av. J. B. Alberdi<br>Recorrido: Rodolfo Scappino ↔ Av. J. B. Alberdi');
-
-         // Traza 4: Desde Av. J. B. Alberdi hasta Ramón L. Falcón
-        const traza4 = L.polyline([
-            [-34.662175, -58.517901], // Av. J. B. Alberdi
-            [-34.655085, -58.527205],
-            [-34.652562, -58.528658], // J. Chavez
-            [-34.640501, -58.529450]  // Ramón L. Falcón (aproximado)
-        ], { color: '#4DFF4D', weight: 6, opacity: 0.8 }).addTo(map);
-        traza4.bindPopup('<strong>TRAZA 4</strong><br>QTH: Gral Paz y Jorge Chávez<br>Recorrido: Av. J. B. Alberdi ↔ Ramón L. Falcón');
-
-       // Traza 5: Desde Ramón L. Falcón hasta Av. Francisco Beiró
-        const traza5 = L.polyline([
-            [-34.640501, -58.529450], // Ramón L. Falcón
-            [-34.625508, -58.530324], // Nazarre
-            [-34.618127, -58.530717]  // Av. Francisco Beiró (aproximado)
-        ], { color: '#4DA6FF', weight: 6, opacity: 0.8 }).addTo(map);
-        traza5.bindPopup('<strong>TRAZA 5</strong><br>QTH: Gral Paz y Nazarre<br>Recorrido: Ramón L. Falcón ↔ Av. Francisco Beiró');
-
-        // Traza 6: Desde Av. Francisco Beiró hasta Av. San Martín
-        const traza6 = L.polyline([
-            [-34.618127, -58.530717], // Av. Francisco Beiró
-            [-34.615550, -58.530801], // Lope de Vega
-            [-34.589254, -58.518551]  // Av. San Martín (aproximado)
-        ], { color: '#9D4DFF', weight: 6, opacity: 0.8 }).addTo(map);
-        traza6.bindPopup('<strong>TRAZA 6</strong><br>QTH: Gral Paz y Av. Lope de Vega<br>Recorrido: Av. Francisco Beiró ↔ Av. San Martín');
-
-       // Traza 7: Desde Av. San Martín hasta Av. De los Constituyentes
-        const traza7 = L.polyline([
-            [-34.589254, -58.518551], // Av. San Martín
-            [-34.569962, -58.509609]  // Av. De los Constituyentes (aproximado)
-        ], { color: '#FF4DFF', weight: 6, opacity: 0.8 }).addTo(map);
-        traza7.bindPopup('<strong>TRAZA 7</strong><br>QTH: Gral Paz y Av. Constituyentes<br>Recorrido: Av. San Martín ↔ Av. De los Constituyentes');
-
-        // Traza 8: Desde Av. De los Constituyentes hasta Av. Cabildo
-        const traza8 = L.polyline([
-            [-34.569962, -58.509609], // Av. De los Constituyentes
-            [-34.551371, -58.500748],
-            [-34.549623, -58.499237],
-            [-34.548697, -58.497608],
-            [-34.538765, -58.475484]  // Av. Cabildo (aproximado)
-        ], { color: '#06090a', weight: 6, opacity: 0.8 }).addTo(map);
-        traza8.bindPopup('<strong>TRAZA 8</strong><br>QTH: Colectora Gral Paz y Dr. R. Balbín<br>Recorrido: Av. De los Constituyentes ↔ Av. Cabildo');
-
-        // --- PUNTOS QTH (con nuevo ícono de móvil policial) ---
-        L.marker([-34.659062, -58.417012], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 1</strong><br>Av. 27 de Febrero - Puente Alsina');
-        L.marker([-34.698003, -58.470053], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 2</strong><br>Av. Gral Paz y Av. Coronel Roca');
-        L.marker([-34.662043, -58.517604], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 3</strong><br>Av. Gral Paz y Av. Juan Bautista Alberdi');
-        L.marker([-34.649977, -58.528588], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 4</strong><br>Av. Gral Paz y calle Jorge Chavez');
-        L.marker([-34.625508, -58.530324], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 5</strong><br>Av. Gral Paz y Calle Nazarre');
-        L.marker([-34.615550, -58.530801], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 6</strong><br>Av. Gral Paz y Av. Lope de Vega');
-        L.marker([-34.569764, -58.509253], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 7</strong><br>Av. Gral Paz y Av. Constituyentes');
-        L.marker([-34.550555, -58.499442], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 8</strong><br>Colectora Av. Gral Paz y Av. Dr. Ricardo Balbín');
-
-        // --- MARCADORES NUMERADOS (sin cambios) ---
-        function addNumberMarker(lat, lng, number, color) {
-            const divIcon = L.divIcon({
-                html: `<div style="background-color: ${color}; color: black; font-weight: bold; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.5); font-size: 14px;">${number}</div>`,
-                className: 'number-marker',
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
+                html: `<div style="background-color: #06090a; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 3px solid #2373aa; box-shadow: 0 4px 8px rgba(0,0,0,0.3); font-size: 24px;">🚓</div>`,
+                className: 'movil-icon',
+                iconSize: [46, 46],
+                iconAnchor: [23, 23],
+                popupAnchor: [0, -23]
             });
-            L.marker([lat, lng], { icon: divIcon }).addTo(map).bindPopup(`Inicio/Fin Traza ${number}`);
+
+            // --- TRAZAS CON LAS COORDENADAS EXACTAS PROPORCIONADAS ---
+            
+            // Traza 1: Av. Roca y Gral Paz hasta Puente Alsina
+            const traza1 = L.polyline([
+                [-34.698247, -58.470106],
+                [-34.704812, -58.4613662],
+                [-34.664660, -58.427571],
+                [-34.661135, -58.422614],
+                [-34.659062, -58.417012]
+            ], { color: '#FF4D4D', weight: 6, opacity: 0.8 }).addTo(map);
+            traza1.bindPopup('<strong>TRAZA 1</strong><br>QTH: Av. 27 de Febrero - Puente Alsina<br>Recorrido: Av. Roca y Gral Paz ↔ 27 de Febrero');
+
+            // Traza 2: Av. Coronel Roca hasta Rodolfo Scappino
+            const traza2 = L.polyline([
+                [-34.698247, -58.470106],
+                [-34.687069, -58.485012],
+                [-34.676786, -58.498518]
+            ], { color: '#FFA64D', weight: 6, opacity: 0.8 }).addTo(map);
+            traza2.bindPopup('<strong>TRAZA 2</strong><br>QTH: Gral Paz y Av. C. Roca<br>Recorrido: Av. C. Roca ↔ Rodolfo Scappino');
+
+            // Traza 3: Rodolfo Scappino hasta Av. J. B. Alberdi
+            const traza3 = L.polyline([
+                [-34.676786, -58.498518],
+                [-34.662175, -58.517901]
+            ], { color: '#FFFF4D', weight: 6, opacity: 0.8 }).addTo(map);
+            traza3.bindPopup('<strong>TRAZA 3</strong><br>QTH: Gral Paz y Av. J. B. Alberdi<br>Recorrido: Rodolfo Scappino ↔ Av. J. B. Alberdi');
+
+            // Traza 4: Av. J. B. Alberdi hasta Ramón L. Falcón
+            const traza4 = L.polyline([
+                [-34.662175, -58.517901],
+                [-34.655085, -58.527205],
+                [-34.652562, -58.528658],
+                [-34.640501, -58.529450]
+            ], { color: '#4DFF4D', weight: 6, opacity: 0.8 }).addTo(map);
+            traza4.bindPopup('<strong>TRAZA 4</strong><br>QTH: Gral Paz y Jorge Chávez<br>Recorrido: Av. J. B. Alberdi ↔ Ramón L. Falcón');
+
+            // Traza 5: Ramón L. Falcón hasta Av. Francisco Beiró
+            const traza5 = L.polyline([
+                [-34.640501, -58.529450],
+                [-34.625508, -58.530324],
+                [-34.618127, -58.530717]
+            ], { color: '#4DA6FF', weight: 6, opacity: 0.8 }).addTo(map);
+            traza5.bindPopup('<strong>TRAZA 5</strong><br>QTH: Gral Paz y Nazarre<br>Recorrido: Ramón L. Falcón ↔ Av. Francisco Beiró');
+
+            // Traza 6: Av. Francisco Beiró hasta Av. San Martín
+            const traza6 = L.polyline([
+                [-34.618127, -58.530717],
+                [-34.615550, -58.530801],
+                [-34.589254, -58.518551]
+            ], { color: '#9D4DFF', weight: 6, opacity: 0.8 }).addTo(map);
+            traza6.bindPopup('<strong>TRAZA 6</strong><br>QTH: Gral Paz y Av. Lope de Vega<br>Recorrido: Av. Francisco Beiró ↔ Av. San Martín');
+
+            // Traza 7: Av. San Martín hasta Av. De los Constituyentes
+            const traza7 = L.polyline([
+                [-34.589254, -58.518551],
+                [-34.569962, -58.509609]
+            ], { color: '#FF4DFF', weight: 6, opacity: 0.8 }).addTo(map);
+            traza7.bindPopup('<strong>TRAZA 7</strong><br>QTH: Gral Paz y Av. Constituyentes<br>Recorrido: Av. San Martín ↔ Av. De los Constituyentes');
+
+            // Traza 8: Av. De los Constituyentes hasta Av. Cabildo
+            const traza8 = L.polyline([
+                [-34.569962, -58.509609],
+                [-34.551371, -58.500748],
+                [-34.549623, -58.499237],
+                [-34.548697, -58.497608],
+                [-34.538765, -58.475484]
+            ], { color: '#06090a', weight: 6, opacity: 0.8 }).addTo(map);
+            traza8.bindPopup('<strong>TRAZA 8</strong><br>QTH: Colectora Gral Paz y Dr. R. Balbín<br>Recorrido: Av. De los Constituyentes ↔ Av. Cabildo');
+
+            // --- PUNTOS QTH CON COORDENADAS EXACTAS ---
+            L.marker([-34.659062, -58.417012], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 1</strong><br>Av. 27 de Febrero - Puente Alsina');
+            L.marker([-34.698003, -58.470053], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 2</strong><br>Av. Gral Paz y Av. Coronel Roca');
+            L.marker([-34.662043, -58.517604], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 3</strong><br>Av. Gral Paz y Av. Juan Bautista Alberdi');
+            L.marker([-34.649977, -58.528588], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 4</strong><br>Av. Gral Paz y calle Jorge Chavez');
+            L.marker([-34.625508, -58.530324], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 5</strong><br>Av. Gral Paz y Calle Nazarre');
+            L.marker([-34.615550, -58.530801], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 6</strong><br>Av. Gral Paz y Av. Lope de Vega');
+            L.marker([-34.569764, -58.509253], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 7</strong><br>Av. Gral Paz y Av. Constituyentes');
+            L.marker([-34.550555, -58.499442], { icon: movilIcon }).addTo(map).bindPopup('<strong>QTH TRAZA 8</strong><br>Colectora Av. Gral Paz y Av. Dr. Ricardo Balbín');
+
+            // Ajustar vista para mostrar todas las trazas
+            const group = L.featureGroup([traza1, traza2, traza3, traza4, traza5, traza6, traza7, traza8]);
+            map.fitBounds(group.getBounds().pad(0.1));
+            
+            console.log('Mapa inicializado correctamente');
         }
 
-        addNumberMarker(-34.659062, -58.417012, '1', '#FF4D4D');
-        addNumberMarker(-34.698247, -58.470106, '2', '#FFA64D');
-        addNumberMarker(-34.676786, -58.498518, '3', '#FFFF4D');
-        addNumberMarker(-34.662175, -58.517901, '4', '#4DFF4D');
-        addNumberMarker(-34.640501, -58.529450, '5', '#4DA6FF');
-        addNumberMarker(-34.618127, -58.530717, '6', '#9D4DFF');
-        addNumberMarker(-34.589254, -58.518551, '7', '#FF4DFF');
-        addNumberMarker(-34.569962, -58.509609, '8', '#06090a');
+        // FUNCIONALIDAD DEL SIDEBAR - MEJORADA PARA REDIMENSIONAR MAPA
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM cargado, inicializando...');
+            
+            const sidebar = document.getElementById('infoSidebar');
+            const toggleBtn = document.getElementById('toggleSidebarBtn');
+            const mobileCloseBtn = document.getElementById('mobileCloseBtn');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            if (!sidebar || !toggleBtn || !mobileCloseBtn || !overlay) {
+                console.error('No se encontraron elementos del sidebar');
+                return;
+            }
+            
+            const isMobile = () => window.innerWidth <= 768;
 
-        // Ajustar límites del mapa
-        const group = L.featureGroup([traza1, traza2, traza3, traza4, traza5, traza6, traza7, traza8]);
-        map.fitBounds(group.getBounds().pad(0.1));
+            function updateSidebarState(forceCollapse) {
+                if (forceCollapse === true) {
+                    sidebar.classList.add('collapsed');
+                    sidebar.classList.remove('mobile-visible');
+                    toggleBtn.classList.add('collapsed');
+                    toggleBtn.innerHTML = '▶';
+                    overlay.classList.remove('active');
+                } else if (forceCollapse === false) {
+                    sidebar.classList.remove('collapsed');
+                    toggleBtn.classList.remove('collapsed');
+                    toggleBtn.innerHTML = '◀';
+                    
+                    if (isMobile()) {
+                        sidebar.classList.add('mobile-visible');
+                        overlay.classList.add('active');
+                    }
+                } else {
+                    // Toggle
+                    if (sidebar.classList.contains('collapsed') || (isMobile() && !sidebar.classList.contains('mobile-visible'))) {
+                        sidebar.classList.remove('collapsed');
+                        toggleBtn.classList.remove('collapsed');
+                        toggleBtn.innerHTML = '◀';
+                        
+                        if (isMobile()) {
+                            sidebar.classList.add('mobile-visible');
+                            overlay.classList.add('active');
+                        }
+                    } else {
+                        sidebar.classList.add('collapsed');
+                        sidebar.classList.remove('mobile-visible');
+                        toggleBtn.classList.add('collapsed');
+                        toggleBtn.innerHTML = '▶';
+                        overlay.classList.remove('active');
+                    }
+                }
+                
+                // CRUCIAL: Redimensionar el mapa después de la animación
+                setTimeout(() => {
+                    if (map) {
+                        map.invalidateSize();
+                        console.log('Mapa redimensionado');
+                    }
+                }, 350);
+            }
+
+            toggleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                updateSidebarState();
+            });
+
+            mobileCloseBtn.addEventListener('click', () => {
+                updateSidebarState(true);
+            });
+
+            overlay.addEventListener('click', () => {
+                updateSidebarState(true);
+            });
+
+            window.addEventListener('resize', () => {
+                if (!isMobile()) {
+                    sidebar.classList.remove('mobile-visible');
+                    overlay.classList.remove('active');
+                }
+                if (map) {
+                    setTimeout(() => map.invalidateSize(), 100);
+                }
+            });
+
+            // Estado inicial - sidebar visible
+            updateSidebarState(false);
+            
+            // Inicializar mapa
+            inicializarMapa();
+        });
     </script>
 </body>
 </html>
